@@ -220,15 +220,27 @@ def main():
         print(f"Saved to: {context_file}")
         print("Starting codex with file reading instruction...")
         
-        # Give codex instruction to read the file
-        instruction = f"""🔴 IMPORTANT: Read the ENTIRE session context 🔴
+        # Give codex instruction to read the file using Read tool
+        line_count = resume_message.count(chr(10))
+        chunks_needed = (line_count // 250) + 1
+        
+        instruction = f"""🔴 IMPORTANT: Load the session context using Read tool 🔴
 
-The file {context_file} contains {len(resume_message):,} characters (~{len(resume_message)//4:,} tokens).
-It has {resume_message.count(chr(10))} lines.
+Please read the file: {context_file}
 
-Please read it COMPLETELY (you may need to read in chunks if there's a limit).
+File info:
+- Size: {len(resume_message):,} characters (~{len(resume_message)//4:,} tokens)
+- Lines: {line_count}
+- Estimated chunks needed: {chunks_needed} (250 lines each)
 
-After reading ALL of it, acknowledge that you've loaded the full context and wait for my next instruction."""
+INSTRUCTIONS:
+1. Use the Read tool (file reader), NOT bash commands like 'dd' or 'cat'
+2. Read in chunks if needed (offset/limit parameters)
+3. The Read tool should auto-approve and not require multiple confirmations
+
+Example: Read the file with offset=0, limit=250, then offset=250, limit=250, etc.
+
+After loading ALL the context, acknowledge and wait for my next instruction."""
         
         subprocess.run(["codex", instruction])
     else:
