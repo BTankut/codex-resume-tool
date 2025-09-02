@@ -314,18 +314,41 @@ if __name__ == "__main__":
                 print("Invalid session number. Use: codex-resume --session <number>")
         
         elif sys.argv[1] == '--help':
-            print("""Codex Resume - Continue previous Codex sessions
+            print("""Codex Resume - Continue previous Codex sessions with conversation history
 
-Usage:
-  codex-resume            Resume the most recent session
-  codex-resume --list     List available sessions for current directory
-  codex-resume --session N  Resume session number N from the list
-  codex-resume --help     Show this help message
+DESCRIPTION:
+  Loads previous Codex session conversations for the current directory.
+  This lightweight version loads only user/assistant messages (~8K tokens).
 
-Examples:
-  codex-resume           # Resume last session
-  codex-resume --list    # Show available sessions
-  codex-resume --session 2  # Resume the 2nd session from list
+USAGE:
+  codex-resume              Resume the most recent session
+  codex-resume --list       List all available sessions for current directory
+  codex-resume --session N  Resume specific session number N from the list
+  codex-resume --help       Show this help message
+
+FEATURES:
+  • Directory-aware: Only shows sessions from current working directory
+  • Lightweight: Loads last ~30 messages (approx 8,000 tokens)
+  • Smart filtering: Removes meta messages and duplicates
+  • Clear context: Shows last exchange as reminder
+  • No auto-execution: Instructs Codex to wait for your command
+
+EXAMPLES:
+  codex-resume              # Resume last session in current directory
+  codex-resume --list       # Show all sessions with timestamps and sizes
+  codex-resume --session 2  # Resume the 2nd session from the list
+
+RELATED COMMANDS:
+  codex-resume-full         # Load FULL context including tool calls (~250K+ tokens)
+  codex-resume-full --list  # List sessions for full context loading
+  codex-chunked             # Alternative lightweight loader
+
+FILES:
+  Sessions stored in: ~/.codex/sessions/
+  Script location: /Users/btmacbookair/CascadeProjects/codex-resume-tool/
+
+NOTE: For complete session history including tool calls and outputs,
+      use 'codex-resume-full' instead (requires Read tool).
 """)
         else:
             print(f"Unknown option: {sys.argv[1]}. Use --help for usage.")

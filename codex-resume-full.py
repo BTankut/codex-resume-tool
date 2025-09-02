@@ -322,16 +322,53 @@ if __name__ == "__main__":
                 print("Invalid session number. Use: codex-resume-full --session <number>")
         
         elif sys.argv[1] == '--help':
-            print("""Codex Resume Full - Continue sessions with complete context
+            print("""Codex Resume Full - Continue sessions with COMPLETE context
 
-Usage:
-  codex-resume-full            Resume most recent session with full context
-  codex-resume-full --list     List available sessions for current directory
-  codex-resume-full --session N  Resume session N with full context
-  codex-resume-full --help     Show this help message
+DESCRIPTION:
+  Loads entire session history including messages, tool calls, and outputs.
+  This comprehensive version can load 250,000+ tokens of context.
 
-This version loads ALL messages, tool calls, and outputs (~250K+ tokens).
-For lighter context, use 'codex-resume' instead.
+USAGE:
+  codex-resume-full              Resume the most recent session with full context
+  codex-resume-full --list       List all available sessions for current directory
+  codex-resume-full --session N  Resume specific session N with full context
+  codex-resume-full --help       Show this help message
+
+FEATURES:
+  • Complete history: All messages, tool calls, and outputs
+  • Large capacity: Handles up to ~250K+ tokens
+  • Tool tracking: Includes bash commands, file edits, etc.
+  • File-based loading: Uses ~/.codex/last-context.txt for large contexts
+  • Read tool required: Forces use of Read tool for reliable loading
+
+WHAT'S INCLUDED:
+  ✓ User/Assistant messages (all)
+  ✓ Tool calls (bash, edit, write, etc.)
+  ✓ Tool outputs and results
+  ✗ Encrypted reasoning blocks (not accessible)
+  ✗ State metadata (filtered out)
+
+EXAMPLES:
+  codex-resume-full              # Resume last session with full context
+  codex-resume-full --list       # Show sessions with sizes and timestamps
+  codex-resume-full --session 3  # Load session #3 with complete history
+
+READ TOOL REQUIREMENT:
+  This script instructs Codex to use the Read tool for loading context.
+  If Read tool is not available, Codex will notify you.
+  The Read tool should auto-approve and not require multiple confirmations.
+
+FILES:
+  Sessions: ~/.codex/sessions/
+  Temp context: ~/.codex/last-context.txt
+  Script: /Users/btmacbookair/CascadeProjects/codex-resume-tool/
+
+TOKEN USAGE:
+  Typical session: 50K-250K tokens
+  Large session: 250K-500K+ tokens
+  
+NOTE: For quick resume with lighter context (~8K tokens),
+      use 'codex-resume' instead.
 """)
         else:
             print(f"Unknown option: {sys.argv[1]}. Use --help for usage.")
