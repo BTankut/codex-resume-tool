@@ -1,14 +1,16 @@
 # Codex Resume Tool
 
-A collection of Python scripts that enable session continuation for Anthropic's Codex CLI, similar to Claude's `--continue` feature.
+A comprehensive toolkit for continuing Anthropic Codex CLI sessions with full context preservation, similar to Claude's `--continue` feature.
 
 ## 🚀 Features
 
-- **Session Persistence**: Continue previous Codex sessions with full context
+- **Session Persistence**: Continue previous Codex sessions with complete context
 - **Directory-Aware**: Automatically finds sessions for your current working directory
-- **Multiple Modes**: Choose between lightweight or full context restoration
-- **Token Efficient**: Smart loading with configurable token limits
-- **Cross-Project**: Works across all your projects
+- **Multiple Loading Strategies**: Choose optimal method based on your needs
+- **Session Selection**: Resume any previous session, not just the latest
+- **Context Verification**: Ensure full context is loaded correctly
+- **Token Optimization**: Smart chunking and loading strategies
+- **Tool History**: Preserves tool calls and outputs
 
 ## 📦 Installation
 
@@ -17,7 +19,7 @@ A collection of Python scripts that enable session continuation for Anthropic's 
 - Codex CLI installed
 - Unix-like environment (macOS/Linux)
 
-### Setup
+### Quick Setup
 
 1. Clone the repository:
 ```bash
@@ -30,114 +32,216 @@ cd codex-resume-tool
 chmod +x *.py
 ```
 
-3. Add aliases to your shell configuration (`~/.zshrc` or `~/.bashrc`):
+3. Add all aliases at once:
 ```bash
-echo 'alias codex-resume="python3 '$(pwd)'/codex-resume.py"' >> ~/.zshrc
-echo 'alias codex-resume-full="python3 '$(pwd)'/codex-resume-full.py"' >> ~/.zshrc
-echo 'alias codex-continue="python3 '$(pwd)'/codex-continue.py"' >> ~/.zshrc
+cat >> ~/.zshrc << 'EOF'
+# Codex Resume Tool Aliases
+alias codex-resume="python3 $(pwd)/codex-resume.py"
+alias codex-resume-full="python3 $(pwd)/codex-resume-full.py"
+alias codex-direct="python3 $(pwd)/codex-resume-direct.py"
+alias codex-chunked="python3 $(pwd)/codex-resume-chunked.py"
+alias codex-verify="python3 $(pwd)/verify-context.py"
+EOF
 source ~/.zshrc
 ```
 
-## 🎯 Usage
+## 🎯 Available Commands
 
-### Quick Resume (Recommended)
-Resume your last session with conversation history:
+### 1. `codex-resume` - Lightweight Resume (Recommended for Quick Continue)
 ```bash
-cd /your/project
-codex-resume
+codex-resume              # Resume most recent session
+codex-resume --list       # List all sessions for current directory
+codex-resume --session 3  # Resume specific session #3
+codex-resume --help       # Show detailed help
 ```
-- Loads last 30 messages (~8K tokens)
-- Fast and efficient
-- Perfect for continuing recent work
+- **Token Usage**: ~8,000 tokens
+- **Content**: Last 30 messages only
+- **Speed**: Very fast
+- **Use When**: Quick continuation of recent work
 
-### Full Resume
-Resume with complete session history including tool calls:
+### 2. `codex-resume-full` - Complete Context Resume (For Critical Work)
 ```bash
-cd /your/project
-codex-resume-full
+codex-resume-full              # Resume with FULL context
+codex-resume-full --list       # List sessions with sizes
+codex-resume-full --session 2  # Load session #2 with full context
+codex-resume-full --help       # Show detailed help
 ```
-- Loads all messages + tool calls + outputs
-- Can handle up to 256K tokens
-- Ideal for complex debugging sessions
+- **Token Usage**: 50,000-250,000+ tokens
+- **Content**: ALL messages, tool calls, outputs
+- **Loading**: Uses file reading (📖 tool) with optimized chunking
+- **Use When**: Need complete history, calculations, tool outputs
 
-### Session Viewer
-View available sessions for current directory:
+### 3. `codex-direct` - Direct Loading (No File Reading)
 ```bash
-cd /your/project
-codex-continue --list
+codex-direct              # Load context directly
+codex-direct --list       # List available sessions
+codex-direct --session N  # Load specific session
+```
+- **Token Usage**: ~80,000 tokens
+- **Content**: Optimized selection of important content
+- **Speed**: Fast, no chunking issues
+- **Use When**: File reading is problematic
+
+### 4. `codex-chunked` - Smart Chunked Loading
+```bash
+codex-chunked    # Load with intelligent chunking
+```
+- **Token Usage**: ~50,000 tokens
+- **Content**: Last 50 important messages
+- **Use When**: Alternative lightweight option
+
+### 5. `codex-verify` - Verify Context Loading
+```bash
+codex-verify    # Check if context was fully loaded
+```
+Run this in a separate terminal after loading context to verify:
+- File size and location
+- Line and token counts
+- Content markers
+- Tool call statistics
+
+## 📊 Command Comparison
+
+| Command | Tokens | Speed | Completeness | Best For |
+|---------|--------|-------|--------------|----------|
+| `codex-resume` | ~8K | ⚡⚡⚡ | Last 30 msgs | Quick work |
+| `codex-resume-full` | 50K-250K+ | ⚡ | Everything | Critical work |
+| `codex-direct` | ~80K | ⚡⚡ | Optimized | No file reading |
+| `codex-chunked` | ~50K | ⚡⚡ | Smart selection | Alternative |
+
+## 🔧 Session Management
+
+### List Sessions
+```bash
+codex-resume --list
+```
+Shows:
+- Session filenames with timestamps
+- File sizes
+- Modification times
+- Session numbers for selection
+
+### Select Specific Session
+```bash
+codex-resume --session 2        # Lightweight load of session #2
+codex-resume-full --session 2   # Full load of session #2
 ```
 
-## 🔧 How It Works
-
-The tool parses Codex's session files stored in `~/.codex/sessions/` and:
-
-1. **Identifies** sessions belonging to your current directory
-2. **Extracts** conversation history and tool interactions
-3. **Formats** the context appropriately
-4. **Loads** it into a new Codex session
-
-### Session Data Types
-
-| Type | Description | Included in Resume | Included in Full |
-|------|-------------|-------------------|------------------|
-| Messages | User/Assistant conversations | ✅ | ✅ |
-| Tool Calls | Function invocations | ❌ | ✅ |
-| Tool Outputs | Function results | ❌ | ✅ |
-| Reasoning | Thought processes | ❌ | ❌ (encrypted) |
-
-## 📁 Project Structure
-
+### Verify Loading
+After loading context, verify in Codex:
 ```
-codex-resume-tool/
-├── codex-resume.py         # Main resume script (lightweight)
-├── codex-resume-full.py    # Full context resume
-├── codex-continue.py       # Session viewer/selector
-└── README.md              # This file
+"How many lines did you read?"
+"Did you find the END OF HISTORY marker?"
+"Search for [TOOL: - how many occurrences?"
 ```
 
-## ⚙️ Configuration
+Or from another terminal:
+```bash
+codex-verify
+```
 
-### Adjust Message Limit
-Edit `codex-resume.py` line ~194:
+## ⚙️ Advanced Configuration
+
+### Adjust Token Limits
+
+Edit `codex-resume.py`:
 ```python
-# Default: last 30 messages
-recent_messages = messages[-30:]  # Change 30 to your preference
+recent_messages = messages[-30:]  # Change 30 to desired count
 ```
 
-### Change Token Budget
-Edit `codex-resume-full.py` line ~194:
+Edit `codex-resume-full.py`:
 ```python
-# Default: 32000 characters (~8K tokens)
-token_budget = 32000  # Increase for more context
+optimal_chunk_size = 2000  # Increase for fewer read operations
 ```
+
+### Optimize Chunk Size
+
+The scripts use intelligent chunking:
+- Default: 2000 lines per chunk (1-2 reads total)
+- Codex default: 25 lines (40+ reads)
+- Adjustable based on your needs
 
 ## 🐛 Troubleshooting
 
-### "No sessions found"
-- Ensure you're in the correct project directory
-- Check if sessions exist: `ls ~/.codex/sessions/`
+### "Read tool not available"
+- Codex uses file reading capability (📖), not a "Read tool"
+- Script automatically handles this
 
-### Context not loading completely
-- For large contexts, use `codex-resume-full`
-- Check file was created: `cat ~/.codex/last-context.txt`
+### Too many read operations
+- Use `codex-direct` for direct loading
+- Or increase `optimal_chunk_size` in scripts
 
-### Token limit exceeded
-- Use `codex-resume` instead of full version
-- Adjust token budget in the script
+### Context not complete
+1. Run `codex-verify` to check
+2. Look for start/end markers
+3. Verify token count matches expected
+
+### Session not found
+- Ensure you're in the correct directory
+- Check `~/.codex/sessions/` for files
+- Use `--list` to see available sessions
+
+## 📁 File Structure
+
+```
+codex-resume-tool/
+├── codex-resume.py          # Lightweight resume (8K tokens)
+├── codex-resume-full.py     # Full context resume (250K+ tokens)
+├── codex-direct.py          # Direct loading without file reading
+├── codex-chunked.py         # Smart chunked loading
+├── verify-context.py        # Context verification tool
+├── VERIFICATION.md          # Verification guide
+├── README.md               # This file
+└── LICENSE                 # MIT License
+```
+
+## 🔍 Context Verification
+
+The tool includes multiple verification methods:
+
+1. **Automatic**: Scripts report loading statistics
+2. **Manual**: Ask Codex about loaded content
+3. **External**: Use `codex-verify` command
+
+### What's Included in Full Context
+
+✅ **Included:**
+- All user messages
+- All assistant responses  
+- Tool calls (bash, edit, write, etc.)
+- Tool outputs and results
+- Error messages
+
+❌ **Not Included:**
+- Encrypted reasoning blocks
+- State metadata
+- System messages
+
+## 💡 Best Practices
+
+1. **For day-to-day work**: Use `codex-resume` (fast, lightweight)
+2. **For critical continuity**: Use `codex-resume-full` (complete context)
+3. **Always verify**: Run `codex-verify` for important sessions
+4. **Session selection**: Use `--list` to find the right session
+5. **Monitor tokens**: Check token usage with `/status` in Codex
+
+## 🚨 Important Notes
+
+- **Token Limits**: Full sessions can use 250K+ tokens
+- **Pro Account Recommended**: For large context loading
+- **Directory Specific**: Sessions are filtered by working directory
+- **No Auto-Execution**: Scripts instruct Codex to wait for commands
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Contributions welcome! Feel free to:
+- Report issues
+- Suggest improvements
+- Submit pull requests
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
@@ -145,45 +249,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built for the Codex community
 - Special thanks to Anthropic for Codex CLI
 
-## 📊 Comparison with Native Features
+## 📞 Support
 
-| Feature | Claude --continue | Codex Resume Tool |
-|---------|------------------|-------------------|
-| Native Support | ✅ | ❌ (Script-based) |
-| Session Recovery | Automatic | Manual command |
-| Token Efficiency | Optimized | Configurable |
-| Directory Aware | ✅ | ✅ |
-| Tool History | ✅ | ✅ |
-| Custom Filtering | ❌ | ✅ |
-
-## 🔜 Roadmap
-
-- [ ] Session merging across multiple sessions
-- [ ] Intelligent context summarization
-- [ ] Token usage preview before loading
-- [ ] Interactive session selection
-- [ ] Support for encrypted reasoning blocks
-- [ ] Windows compatibility
-- [ ] GUI interface
-
-## 💡 Tips
-
-- Use `codex-resume` for quick continuations
-- Use `codex-resume-full` when you need complete context
-- Clean old sessions periodically to improve performance
-- Set up keyboard shortcuts for faster access
-
-## 🐞 Known Issues
-
-- Reasoning blocks are encrypted and cannot be restored
-- Very long lines (>2000 chars) may be truncated
-- Maximum context limited by Codex's token limits
-
-## 📧 Contact
-
-- GitHub: [@BTankut](https://github.com/BTankut)
-- Issues: [GitHub Issues](https://github.com/BTankut/codex-resume-tool/issues)
+- **Issues**: [GitHub Issues](https://github.com/BTankut/codex-resume-tool/issues)
+- **Author**: [@BTankut](https://github.com/BTankut)
 
 ---
 
-**Note**: This is an unofficial tool. For official Codex support, please refer to [Anthropic's documentation](https://docs.anthropic.com/).
+**Latest Version**: 2.0.0  
+**Last Updated**: December 2024

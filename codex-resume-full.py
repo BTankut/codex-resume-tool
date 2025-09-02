@@ -230,24 +230,36 @@ def main():
         line_count = resume_message.count(chr(10))
         chunks_needed = (line_count // 250) + 1
         
-        instruction = f"""🔴 IMPORTANT: Load the complete session context 🔴
+        # Calculate optimal chunk size for faster loading
+        optimal_chunk_size = 2000  # Much larger chunks = much fewer reads
+        chunks_needed = (line_count // optimal_chunk_size) + 1
+        
+        instruction = f"""🔴 CRITICAL: Load the COMPLETE session context - EVERY SINGLE LINE 🔴
 
-Please read this file completely: {context_file}
+File to read: {context_file}
 
 File info:
 - Size: {len(resume_message):,} characters (~{len(resume_message)//4:,} tokens)  
 - Lines: {line_count}
+- MUST BE READ COMPLETELY - NO SKIPPING
 
-INSTRUCTIONS:
-1. Use your file reading capability (the 📖 tool) to read the file
-2. You may need to read it in chunks if it's too large
-3. Use elevated read access if needed
-4. Read the ENTIRE file, not just a sample
+EFFICIENT LOADING METHOD:
+1. Use your file reading capability (📖) with MAXIMUM chunk size
+2. Read {optimal_chunk_size} lines at a time (or more if possible)
+3. Should take only {chunks_needed} operations (not 40+)
+4. DO NOT stop early - read ENTIRE file
 
-The file contains our complete previous session history.
-After loading ALL the context, acknowledge that you've loaded it and wait for my next instruction.
+CRITICAL: This file contains calculation results, tool outputs, and decision history.
+Missing ANY part could break our work continuity.
 
-Note: If the file is too large to display at once, read it in sections but make sure to process the entire content."""
+VERIFICATION AFTER LOADING:
+After reading the file, please confirm by showing:
+1. Total lines read: should be {line_count}
+2. Found "=== FULL SESSION HISTORY ===" marker
+3. Found "=== END OF HISTORY ===" marker
+4. Approximate tokens loaded
+
+Example response: "Loaded all {line_count} lines (~{len(resume_message)//4:,} tokens) with start/end markers confirmed." """
         
         subprocess.run(["codex", instruction])
     else:
