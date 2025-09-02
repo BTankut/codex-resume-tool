@@ -138,7 +138,13 @@ def main():
     current_dir = Path.cwd()
     print(f"Looking for sessions in: {current_dir}")
     
-    matching_sessions = find_sessions_for_directory(current_dir)
+    # Check if a specific session was selected
+    selected_session = os.environ.get('CODEX_SELECTED_SESSION')
+    if selected_session:
+        matching_sessions = [Path(selected_session)]
+        os.environ.pop('CODEX_SELECTED_SESSION')  # Clean up
+    else:
+        matching_sessions = find_sessions_for_directory(current_dir)
     
     if not matching_sessions:
         print(f"No previous sessions found for this directory.")
@@ -224,27 +230,110 @@ def main():
         line_count = resume_message.count(chr(10))
         chunks_needed = (line_count // 250) + 1
         
-        instruction = f"""🔴 IMPORTANT: Load the session context using Read tool 🔴
+        instruction = f"""🔴 MANDATORY: Use Read tool to load session context 🔴
 
-Please read the file: {context_file}
+You MUST read this file using the Read tool: {context_file}
 
 File info:
-- Size: {len(resume_message):,} characters (~{len(resume_message)//4:,} tokens)
+- Size: {len(resume_message):,} characters (~{len(resume_message)//4:,} tokens)  
 - Lines: {line_count}
-- Estimated chunks needed: {chunks_needed} (250 lines each)
+- Chunks needed: {chunks_needed} (at 250 lines each)
 
-INSTRUCTIONS:
-1. Use the Read tool (file reader), NOT bash commands like 'dd' or 'cat'
-2. Read in chunks if needed (offset/limit parameters)
-3. The Read tool should auto-approve and not require multiple confirmations
+REQUIRED STEPS:
+1. Use Read tool with parameters: file_path="{context_file}", offset=0, limit=250
+2. Continue with offset=250, limit=250
+3. Repeat until you've read all {line_count} lines
 
-Example: Read the file with offset=0, limit=250, then offset=250, limit=250, etc.
+DO NOT USE:
+- Shell commands (cat, head, tail, sed, dd)
+- Any method other than Read tool
 
-After loading ALL the context, acknowledge and wait for my next instruction."""
+If you don't have Read tool, respond: "Read tool not available, please enable it."
+
+After reading ALL chunks, acknowledge the full context is loaded."""
         
         subprocess.run(["codex", instruction])
     else:
         subprocess.run(["codex", resume_message])
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == '--list':
+            # List available sessions
+            current_dir = Path.cwd()
+            matching = find_sessions_for_directory(current_dir)
+            
+            if matching:
+                def get_session_timestamp(filepath):
+                    name = filepath.name
+                    try:
+                        if 'rollout-' in name:
+                            timestamp_part = name.split('rollout-')[1][:19]
+                            timestamp_part = timestamp_part.replace('T', ' ').replace('-', '')
+                            return timestamp_part
+                    except:
+                        pass
+                    return str(filepath.stat().st_mtime)
+                
+                matching.sort(key=get_session_timestamp, reverse=True)
+                print(f"\nSessions for {current_dir}:")
+                for i, f in enumerate(matching[:10], 1):
+                    mtime = datetime.fromtimestamp(f.stat().st_mtime)
+                    size_mb = f.stat().st_size / 1024 / 1024
+                    print(f"{i}. {f.name}")
+                    print(f"   Modified: {mtime.strftime('%Y-%m-%d %H:%M:%S')} | Size: {size_mb:.2f} MB")
+                print(f"\nTo resume a specific session with FULL context, use: codex-resume-full --session <number>")
+            else:
+                print(f"No sessions found for {current_dir}")
+        
+        elif sys.argv[1] == '--session' and len(sys.argv) > 2:
+            # Resume specific session with full context
+            try:
+                session_num = int(sys.argv[2]) - 1
+                current_dir = Path.cwd()
+                matching = find_sessions_for_directory(current_dir)
+                
+                if matching:
+                    def get_session_timestamp(filepath):
+                        name = filepath.name
+                        try:
+                            if 'rollout-' in name:
+                                timestamp_part = name.split('rollout-')[1][:19]
+                                timestamp_part = timestamp_part.replace('T', ' ').replace('-', '')
+                                return timestamp_part
+                        except:
+                            pass
+                        return str(filepath.stat().st_mtime)
+                    
+                    matching.sort(key=get_session_timestamp, reverse=True)
+                    
+                    if 0 <= session_num < len(matching):
+                        selected_session = matching[session_num]
+                        print(f"Resuming session with FULL context: {selected_session.name}")
+                        # Pass the selected session to main
+                        sys.argv = [sys.argv[0]]  # Clear args
+                        os.environ['CODEX_SELECTED_SESSION'] = str(selected_session)
+                        main()
+                    else:
+                        print(f"Invalid session number. Available: 1-{len(matching)}")
+                else:
+                    print(f"No sessions found for {current_dir}")
+            except ValueError:
+                print("Invalid session number. Use: codex-resume-full --session <number>")
+        
+        elif sys.argv[1] == '--help':
+            print("""Codex Resume Full - Continue sessions with complete context
+
+Usage:
+  codex-resume-full            Resume most recent session with full context
+  codex-resume-full --list     List available sessions for current directory
+  codex-resume-full --session N  Resume session N with full context
+  codex-resume-full --help     Show this help message
+
+This version loads ALL messages, tool calls, and outputs (~250K+ tokens).
+For lighter context, use 'codex-resume' instead.
+""")
+        else:
+            print(f"Unknown option: {sys.argv[1]}. Use --help for usage.")
+    else:
+        main()

@@ -133,7 +133,13 @@ def main():
     current_dir = Path.cwd()
     print(f"Looking for sessions in: {current_dir}")
     
-    matching_sessions = find_sessions_for_directory(current_dir)
+    # Check if a specific session was selected
+    selected_session = os.environ.get('CODEX_SELECTED_SESSION')
+    if selected_session:
+        matching_sessions = [Path(selected_session)]
+        os.environ.pop('CODEX_SELECTED_SESSION')  # Clean up
+    else:
+        matching_sessions = find_sessions_for_directory(current_dir)
     
     if not matching_sessions:
         print(f"No previous sessions found for this directory.")
@@ -243,16 +249,85 @@ def main():
     subprocess.run(["codex", resume_message])
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == '--list':
-        current_dir = Path.cwd()
-        matching = find_sessions_for_directory(current_dir)
+    if len(sys.argv) > 1:
+        if sys.argv[1] == '--list':
+            # List available sessions
+            current_dir = Path.cwd()
+            matching = find_sessions_for_directory(current_dir)
+            
+            if matching:
+                def get_session_timestamp(filepath):
+                    name = filepath.name
+                    try:
+                        if 'rollout-' in name:
+                            timestamp_part = name.split('rollout-')[1][:19]
+                            timestamp_part = timestamp_part.replace('T', ' ').replace('-', '')
+                            return timestamp_part
+                    except:
+                        pass
+                    return str(filepath.stat().st_mtime)
+                
+                matching.sort(key=get_session_timestamp, reverse=True)
+                print(f"\nSessions for {current_dir}:")
+                for i, f in enumerate(matching[:10], 1):
+                    mtime = datetime.fromtimestamp(f.stat().st_mtime)
+                    size_mb = f.stat().st_size / 1024 / 1024
+                    print(f"{i}. {f.name}")
+                    print(f"   Modified: {mtime.strftime('%Y-%m-%d %H:%M:%S')} | Size: {size_mb:.2f} MB")
+                print(f"\nTo resume a specific session, use: codex-resume --session <number>")
+            else:
+                print(f"No sessions found for {current_dir}")
         
-        if matching:
-            print(f"Sessions for {current_dir}:")
-            for i, f in enumerate(sorted(matching, key=lambda x: x.stat().st_mtime, reverse=True)[:5], 1):
-                mtime = datetime.fromtimestamp(f.stat().st_mtime)
-                print(f"{i}. {f.name} - {mtime.strftime('%Y-%m-%d %H:%M:%S')}")
+        elif sys.argv[1] == '--session' and len(sys.argv) > 2:
+            # Resume specific session
+            try:
+                session_num = int(sys.argv[2]) - 1
+                current_dir = Path.cwd()
+                matching = find_sessions_for_directory(current_dir)
+                
+                if matching:
+                    def get_session_timestamp(filepath):
+                        name = filepath.name
+                        try:
+                            if 'rollout-' in name:
+                                timestamp_part = name.split('rollout-')[1][:19]
+                                timestamp_part = timestamp_part.replace('T', ' ').replace('-', '')
+                                return timestamp_part
+                        except:
+                            pass
+                        return str(filepath.stat().st_mtime)
+                    
+                    matching.sort(key=get_session_timestamp, reverse=True)
+                    
+                    if 0 <= session_num < len(matching):
+                        selected_session = matching[session_num]
+                        print(f"Resuming session: {selected_session.name}")
+                        # Pass the selected session to main
+                        sys.argv = [sys.argv[0]]  # Clear args
+                        os.environ['CODEX_SELECTED_SESSION'] = str(selected_session)
+                        main()
+                    else:
+                        print(f"Invalid session number. Available: 1-{len(matching)}")
+                else:
+                    print(f"No sessions found for {current_dir}")
+            except ValueError:
+                print("Invalid session number. Use: codex-resume --session <number>")
+        
+        elif sys.argv[1] == '--help':
+            print("""Codex Resume - Continue previous Codex sessions
+
+Usage:
+  codex-resume            Resume the most recent session
+  codex-resume --list     List available sessions for current directory
+  codex-resume --session N  Resume session number N from the list
+  codex-resume --help     Show this help message
+
+Examples:
+  codex-resume           # Resume last session
+  codex-resume --list    # Show available sessions
+  codex-resume --session 2  # Resume the 2nd session from list
+""")
         else:
-            print(f"No sessions found for {current_dir}")
+            print(f"Unknown option: {sys.argv[1]}. Use --help for usage.")
     else:
         main()
