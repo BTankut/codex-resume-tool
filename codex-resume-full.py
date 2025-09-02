@@ -230,27 +230,24 @@ def main():
         line_count = resume_message.count(chr(10))
         chunks_needed = (line_count // 250) + 1
         
-        instruction = f"""🔴 MANDATORY: Use Read tool to load session context 🔴
+        instruction = f"""🔴 IMPORTANT: Load the complete session context 🔴
 
-You MUST read this file using the Read tool: {context_file}
+Please read this file completely: {context_file}
 
 File info:
 - Size: {len(resume_message):,} characters (~{len(resume_message)//4:,} tokens)  
 - Lines: {line_count}
-- Chunks needed: {chunks_needed} (at 250 lines each)
 
-REQUIRED STEPS:
-1. Use Read tool with parameters: file_path="{context_file}", offset=0, limit=250
-2. Continue with offset=250, limit=250
-3. Repeat until you've read all {line_count} lines
+INSTRUCTIONS:
+1. Use your file reading capability (the 📖 tool) to read the file
+2. You may need to read it in chunks if it's too large
+3. Use elevated read access if needed
+4. Read the ENTIRE file, not just a sample
 
-DO NOT USE:
-- Shell commands (cat, head, tail, sed, dd)
-- Any method other than Read tool
+The file contains our complete previous session history.
+After loading ALL the context, acknowledge that you've loaded it and wait for my next instruction.
 
-If you don't have Read tool, respond: "Read tool not available, please enable it."
-
-After reading ALL chunks, acknowledge the full context is loaded."""
+Note: If the file is too large to display at once, read it in sections but make sure to process the entire content."""
         
         subprocess.run(["codex", instruction])
     else:
